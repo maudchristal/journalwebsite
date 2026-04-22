@@ -1,0 +1,153 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Echoes Journal</title>
+    <meta
+      name="description"
+      content="A personal, family, and legacy journaling website with optional public storytelling and time-released entries."
+    />
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <header class="site-header">
+      <div class="container">
+        <h1>Echoes Journal</h1>
+        <p class="subtitle">
+          A private-first journaling space for yourself, your loved ones, and your future.
+        </p>
+      </div>
+    </header>
+
+    <main class="container grid">
+      <section class="card">
+        <h2>Write an Entry</h2>
+        <form id="entry-form">
+          <label for="entry-title">Title</label>
+          <input id="entry-title" name="title" type="text" required placeholder="A meaningful moment..." />
+
+          <label for="entry-category">Section</label>
+          <select id="entry-category" name="category" required>
+            <option value="">Choose one</option>
+            <option value="Love">Love</option>
+            <option value="Career">Career</option>
+            <option value="Lessons">Lessons</option>
+            <option value="Friendships">Friendships</option>
+            <option value="Big Moments">Big Moments</option>
+            <option value="Family">Family</option>
+            <option value="Health">Health</option>
+            <option value="Other">Other</option>
+          </select>
+
+          <label for="entry-body">Journal entry</label>
+          <textarea
+            id="entry-body"
+            name="body"
+            rows="7"
+            required
+            placeholder="Write what happened, how you felt, and what you learned..."
+          ></textarea>
+
+          <label for="entry-audience">Visibility</label>
+          <select id="entry-audience" name="audience" required>
+            <option value="Self">Only Me</option>
+            <option value="Family">Family + Close Friends</option>
+            <option value="Public">Public Story</option>
+            <option value="Individual">Specific Person</option>
+          </select>
+
+          <div id="individual-options" class="hidden">
+            <label for="recipient-name">Recipient Name</label>
+            <input id="recipient-name" name="recipientName" type="text" placeholder="Who should get this?" />
+
+            <label for="delivery-method">Delivery Method</label>
+            <select id="delivery-method" name="deliveryMethod">
+              <option value="">Choose a method</option>
+              <option value="Portal">Website Portal</option>
+              <option value="Email">Email</option>
+              <option value="Text">Text Message</option>
+            </select>
+          </div>
+
+          <div class="row">
+            <input id="schedule-toggle" name="isScheduled" type="checkbox" />
+            <label for="schedule-toggle">Time release this entry</label>
+          </div>
+
+          <div id="schedule-options" class="hidden">
+            <label for="release-date">Release date/time</label>
+            <input id="release-date" name="releaseDate" type="datetime-local" />
+          </div>
+
+          <div class="row">
+            <input id="ai-opt-in" name="aiOptIn" type="checkbox" />
+            <label for="ai-opt-in">Opt into AI grouping + reflection support</label>
+          </div>
+
+          <button type="submit">Save Entry</button>
+        </form>
+      </section>
+
+      <section class="card">
+        <h2>Filters</h2>
+        <div class="filters">
+          <label for="filter-category">Filter by section</label>
+          <select id="filter-category">
+            <option value="All">All sections</option>
+            <option value="Love">Love</option>
+            <option value="Career">Career</option>
+            <option value="Lessons">Lessons</option>
+            <option value="Friendships">Friendships</option>
+            <option value="Big Moments">Big Moments</option>
+            <option value="Family">Family</option>
+            <option value="Health">Health</option>
+            <option value="Other">Other</option>
+          </select>
+
+          <label for="filter-audience">Filter by visibility</label>
+          <select id="filter-audience">
+            <option value="All">All visibility</option>
+            <option value="Self">Only Me</option>
+            <option value="Family">Family + Close Friends</option>
+            <option value="Public">Public Story</option>
+            <option value="Individual">Specific Person</option>
+          </select>
+        </div>
+
+        <h3>Family Legacy Timeline</h3>
+        <p class="muted">A cross-generation view of published family stories.</p>
+        <ul id="family-timeline" class="list"></ul>
+      </section>
+
+      <section class="card span-2">
+        <div class="card-header">
+          <h2>Your Journal Feed</h2>
+          <button id="seed-demo" class="secondary">Load Demo Entries</button>
+        </div>
+        <p class="muted">
+          Entries are stored in your browser for now (no account needed). Scheduled entries stay hidden until their release time.
+        </p>
+        <ul id="entries-list" class="list"></ul>
+      </section>
+
+      <section class="card span-2">
+        <h2>AI Companion (Optional)</h2>
+        <p class="muted">
+          This starter shows where AI features will fit: finding similar entries, surfacing uplifting memories, and helping analyze situations.
+        </p>
+        <div id="ai-panel" class="ai-panel">
+          <p>No AI insights yet. Save entries with AI opt-in to preview grouped themes.</p>
+        </div>
+      </section>
+    </main>
+
+    <footer class="site-footer">
+      <div class="container">
+        <p>Built for legacy storytelling, reflection, and meaningful connection.</p>
+      </div>
+    </footer>
+
+    <script src="script.js"></script>
+  </body>
+</html>
