@@ -23,6 +23,7 @@ import { firebaseConfig } from "./firebase-config.js";
 const NAV_KEY = "written_active_page";
 const JOURNAL_SECTION_KEY = "written_journal_section";
 const SETTINGS_KEY = "written_settings";
+const GLOBAL_BIO_KEY = "written_global_bios";
 const PROFILE_DOC_ID = "main";
 const USERNAME_RE = /^[a-z0-9._]{3,24}$/;
 const REPLICATE_PROXY_URL = "https://itp-ima-replicate-proxy.web.app/api/create_n_get";
@@ -67,6 +68,9 @@ const state = {
     defaultAudience: "Self",
     defaultEchoesOptIn: false,
   },
+  globalFilter: "All",
+  activeBioId: null,
+  globalBios: [],
 };
 
 const onboardingSlides = [
@@ -109,6 +113,12 @@ const ids = {
   timelineClearBtn: $("timeline-clear-btn"), timelineResults: $("timeline-results"),
   lettersOutboxList: $("letters-outbox-list"),
   letterPrompts: $("letter-prompts"),
+  globalSearch: $("global-search"), globalFilters: $("global-filters"), globalCards: $("global-cards"),
+  activeBiography: $("active-biography"), bioSubjectName: $("bio-subject-name"), bioTagline: $("bio-tagline"),
+  bioMeta: $("bio-meta"), bioContributions: $("bio-contributions"), addBioEntryBtn: $("add-bio-entry-btn"),
+  closeBioBtn: $("close-bio-btn"), startBiographyBtn: $("start-biography-btn"), globalModal: $("global-modal"),
+  globalModalClose: $("global-modal-close"), createBioBtn: $("create-bio-btn"), bioSubjectInput: $("bio-subject-input"),
+  bioTaglineInput: $("bio-tagline-input"), bioCategoryInput: $("bio-category-input"), bioCoverInput: $("bio-cover-input"),
   echoesFeed: $("echoes-feed"), greetingTitle: $("greeting-title"), continueCard: $("continue-card"), arrivingSoon: $("arriving-soon"),
   entryBodyEditor: $("entry-body-editor"), entryWordCount: $("entry-word-count"), editorToolbar: document.querySelector(".editor-toolbar"),
   startFirstEntryBtn: $("start-first-entry-btn"),
@@ -174,7 +184,47 @@ const parseSettings = () => {
     console.error("Could not parse settings:", err);
   }
 };
+const parseGlobalBios = () => {
+  try {
+    const raw = localStorage.getItem(GLOBAL_BIO_KEY);
+    if (!raw) return;
+    const parsed = JSON.parse(raw);
+    state.globalBios = Array.isArray(parsed) ? parsed : [];
+  } catch (err) {
+    console.error("Could not parse global biographies:", err);
+  }
+};
+const seedGlobalBios = () => {
+  if (state.globalBios.length) return;
+  const now = new Date().toISOString();
+  state.globalBios = [
+    {
+      id: "bio_maya_angelou",
+      subject: "Maya Angelou",
+      tagline: "Poet. Memoirist. Voice of resilience.",
+      category: "People",
+      coverImage: "",
+      createdAt: now,
+      updatedAt: now,
+      contributions: [
+        { id: "c_seed_1", writer: "Anonymous", createdAt: now, body: "Her words continue to shape how many of us think about courage and dignity." },
+      ],
+    },
+    {
+      id: "bio_harlem",
+      subject: "Harlem Renaissance",
+      tagline: "A cultural movement that transformed art and identity.",
+      category: "Movements",
+      coverImage: "",
+      createdAt: now,
+      updatedAt: now,
+      contributions: [{ id: "c_seed_2", writer: "Anonymous", createdAt: now, body: "A living archive of writers, musicians, and thinkers." }],
+    },
+  ];
+  persistGlobalBios();
+};
 const persistSettings = () => localStorage.setItem(SETTINGS_KEY, JSON.stringify(state.settings));
+const persistGlobalBios = () => localStorage.setItem(GLOBAL_BIO_KEY, JSON.stringify(state.globalBios));
 const normalizeUsername = (v) => String(v || "").trim().toLowerCase();
 const setSettingsStatus = (message = "", type = "") => {
   if (!ids.settingsStatus) return;
@@ -358,6 +408,20 @@ const setEditorContent = (text = "") => {
   $("entry-body").value = text.trim();
   updateEditorMetrics();
 };
+const addContributionToBio = (bioId, { body, writer }) => {
+  const idx = state.globalBios.findIndex((b) => b.id === bioId);
+  if (idx < 0) return false;
+  const contribution = {
+    id: `c_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
+    writer: writer || "Anonymous",
+    body: String(body || "").trim(),
+    createdAt: new Date().toISOString(),
+  };
+  state.globalBios[idx].contributions.push(contribution);
+  state.globalBios[idx].updatedAt = contribution.createdAt;
+  persistGlobalBios();
+  return true;
+};
 const updateEditorMetrics = () => {
   if (!ids.entryBodyEditor) return;
   const words = normalizeEditorText()
@@ -448,10 +512,62 @@ const renderEchoes = () => {
           .join("");
 };
 
+const getVisibleGlobalBios = () => {
+  const term = String(ids.globalSearch?.value || "").trim().toLowerCase();
+  return state.globalBios.filter((bio) => {
+    const byFilter = state.globalFilter === "All" || bio.category === state.globalFilter;
+    const byTerm =
+      !term ||
+      String(bio.subject || "").toLowerCase().includes(term) ||
+      String(bio.tagline || "").toLowerCase().includes(term) ||
+      String(bio.category || "").toLowerCase().includes(term);
+    return byFilter && byTerm;
+  });
+};
+
+const renderActiveBio = () => {
+  const bio = state.globalBios.find((x) => x.id === state.activeBioId);
+  if (!bio) {
+    ids.activeBiography.classList.add("hidden");
+    return;
+  }
+  ids.activeBiography.classList.remove("hidden");
+  ids.bioSubjectName.textContent = bio.subject;
+  ids.bioTagline.textContent = bio.tagline || "Living biography";
+  ids.bioMeta.textContent = `${bio.contributions.length} writers • Last updated ${fmt(bio.updatedAt || bio.createdAt)}`;
+  ids.bioContributions.innerHTML = bio.contributions
+    .slice()
+    .sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt))
+    .map(
+      (entry) =>
+        `<li class="entry-item bio-contribution"><strong>${esc(entry.writer || "Anonymous")}</strong><div class="bio-meta">${fmt(entry.createdAt)}</div><p>${esc(entry.body || "")}</p><button type="button" class="report-btn" data-report-id="${esc(entry.id)}">Flag/report</button></li>`
+    )
+    .join("");
+};
+
+const renderGlobal = () => {
+  const visible = getVisibleGlobalBios();
+  ids.globalCards.innerHTML =
+    visible.length === 0
+      ? "<li class='entry-item muted'>No biographies match yet. Start one to open the first thread.</li>"
+      : visible
+          .map((bio) => {
+            const initial = String(bio.subject || "?").trim().charAt(0).toUpperCase() || "?";
+            return `<li class="global-card"><div class="global-head"><div class="global-avatar">${esc(initial)}</div><div><strong>${esc(
+              bio.subject
+            )}</strong><div class="muted">${esc(bio.tagline || "")}</div></div></div><div class="muted">${bio.contributions.length} contributors</div><div class="muted">Last updated ${fmt(
+              bio.updatedAt || bio.createdAt
+            )}</div><button type="button" class="secondary-action" data-open-bio="${esc(bio.id)}">Open Active Biography</button></li>`;
+          })
+          .join("");
+  renderActiveBio();
+};
+
 const rerender = () => {
   renderEntries();
   renderTimeline();
   renderEchoes();
+  renderGlobal();
 };
 
 if (isFirebaseConfigured()) {
@@ -518,6 +634,7 @@ on(form, "submit", async (event) => {
     category: String(fd.get("category") || "Love"),
     body: String(fd.get("body") || "").trim(),
     audience: String(fd.get("audience") || "Self"),
+    globalSubject: String(fd.get("globalSubject") || "").trim(),
     recipientName: String(fd.get("recipientName") || "").trim(),
     deliveryMethod: String(fd.get("releaseTarget") || "me"),
     isScheduled,
@@ -530,6 +647,18 @@ on(form, "submit", async (event) => {
   };
   try {
     await addDoc(collection(state.db, "users", state.user.uid, "entries"), payload);
+    if (payload.globalSubject) {
+      const match = state.globalBios.find((bio) => bio.subject.toLowerCase() === payload.globalSubject.toLowerCase());
+      if (match) {
+        const shouldAdd = window.confirm(`Add this to ${match.subject}'s Active Biography on Global?`);
+        if (shouldAdd) {
+          addContributionToBio(match.id, { body: payload.body, writer: payload.authorName });
+          state.activeBioId = match.id;
+          setActivePage("global");
+          renderGlobal();
+        }
+      }
+    }
     clearForm();
     closeDrawer();
   } catch (e) {
@@ -659,6 +788,89 @@ on(timelineToggleBtn, "click", () => {
   renderTimeline();
 });
 
+on(ids.globalSearch, "input", renderGlobal);
+on(ids.globalFilters, "click", (e) => {
+  const target = e.target.closest("[data-global-filter]");
+  if (!target) return;
+  state.globalFilter = target.dataset.globalFilter;
+  ids.globalFilters.querySelectorAll(".chip").forEach((el) => el.classList.toggle("active", el === target));
+  renderGlobal();
+});
+on(ids.globalCards, "click", (e) => {
+  const target = e.target.closest("[data-open-bio]");
+  if (!target) return;
+  state.activeBioId = target.dataset.openBio;
+  renderActiveBio();
+});
+on(ids.closeBioBtn, "click", () => {
+  state.activeBioId = null;
+  ids.activeBiography.classList.add("hidden");
+});
+on(ids.startBiographyBtn, "click", () => {
+  ids.globalModal.classList.remove("hidden");
+  document.body.style.overflow = "hidden";
+});
+on(ids.globalModalClose, "click", () => {
+  ids.globalModal.classList.add("hidden");
+  if (ids.entryDrawer.classList.contains("hidden") && ids.authModal.classList.contains("hidden")) document.body.style.overflow = "";
+});
+on(ids.globalModal, "click", (e) => {
+  if (e.target !== ids.globalModal) return;
+  ids.globalModal.classList.add("hidden");
+  if (ids.entryDrawer.classList.contains("hidden") && ids.authModal.classList.contains("hidden")) document.body.style.overflow = "";
+});
+on(ids.createBioBtn, "click", () => {
+  const subject = String(ids.bioSubjectInput.value || "").trim();
+  if (!subject) return alert("Subject name is required.");
+  const tag = String(ids.bioTaglineInput.value || "").trim();
+  const category = String(ids.bioCategoryInput.value || "People");
+  const coverImage = String(ids.bioCoverInput.value || "").trim();
+  const now = new Date().toISOString();
+  const starter = {
+    id: `bio_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
+    subject,
+    tagline: tag,
+    category,
+    coverImage,
+    createdAt: now,
+    updatedAt: now,
+    contributions: [
+      {
+        id: `c_${Date.now()}_0`,
+        writer: state.user?.displayName || state.settings.displayName || "Anonymous",
+        createdAt: now,
+        body: `Opening contribution for ${subject}.`,
+      },
+    ],
+  };
+  state.globalBios.unshift(starter);
+  persistGlobalBios();
+  ids.globalModal.classList.add("hidden");
+  ids.bioSubjectInput.value = "";
+  ids.bioTaglineInput.value = "";
+  ids.bioCoverInput.value = "";
+  state.activeBioId = starter.id;
+  if (ids.entryDrawer.classList.contains("hidden") && ids.authModal.classList.contains("hidden")) document.body.style.overflow = "";
+  setActivePage("global");
+  renderGlobal();
+});
+on(ids.addBioEntryBtn, "click", () => {
+  const bio = state.globalBios.find((x) => x.id === state.activeBioId);
+  if (!bio) return;
+  const text = window.prompt(`Add a contribution to ${bio.subject}:`);
+  if (!text || !text.trim()) return;
+  addContributionToBio(bio.id, {
+    body: text,
+    writer: state.user?.displayName || state.settings.displayName || "Anonymous",
+  });
+  renderGlobal();
+});
+on(ids.bioContributions, "click", (e) => {
+  const target = e.target.closest("[data-report-id]");
+  if (!target) return;
+  alert("Thanks. This contribution has been flagged for review.");
+});
+
 on(newEntryBtn, "click", () => openDrawer(false));
 on(quickWriteBtn, "click", () => openDrawer(false));
 on(ids.startFirstEntryBtn, "click", () => openDrawer(false));
@@ -727,6 +939,8 @@ ids.authActionButtons.forEach((btn) =>
 );
 
 parseSettings();
+parseGlobalBios();
+seedGlobalBios();
 applySettingsToUi();
 updateEditorMetrics();
 setActivePage(state.activePage);
