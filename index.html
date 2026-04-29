@@ -3,15 +3,16 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Written</title>
+    <title>Written - Your Personal Journal</title>
     <meta
       name="description"
       content="A personal, family, and legacy journaling website with optional public storytelling and time-released entries."
     />
+    <link rel="icon" type="image/svg+xml" href='data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"%3E%3Crect width="64" height="64" rx="14" fill="%235d29f4"/%3E%3Cpath d="M13 16h10l9 34 9-34h10L39 50h-8L13 16z" fill="%23fff"/%3E%3C/svg%3E' />
     <link rel="stylesheet" href="styles.css" />
   </head>
   <body>
-    <div id="auth-setup-hint" class="banner muted hidden">
+    <div id="auth-setup-hint" class="banner muted hidden" aria-hidden="true">
       Firebase is not configured. Add your Firebase app config to <code>firebase-config.js</code> to
       enable authentication and cloud sync.
     </div>
@@ -52,11 +53,12 @@
           <div class="grid-home">
             <article class="card">
               <h3>Continue where you left off</h3>
-              <p id="continue-card" class="muted">No unfinished entry yet. Start a thought and come back anytime.</p>
+              <p id="continue-card" class="muted">Start your first entry and create a small ritual you can return to anytime.</p>
+              <button id="start-first-entry-btn" class="secondary-action" type="button">Start your first entry</button>
             </article>
             <article class="card">
               <h3>Arriving soon</h3>
-              <p id="arriving-soon" class="muted">No time-released letters are arriving soon.</p>
+              <p id="arriving-soon" class="muted">When you schedule a letter, this space previews what is unlocking next.</p>
             </article>
             <article class="card">
               <h3>Circle updates</h3>
@@ -194,13 +196,13 @@
     </div>
 
     <nav class="mobile-tabbar" id="mobile-tabbar">
-      <button class="mobile-tab active" data-page="home">🏠</button>
-      <button class="mobile-tab" data-page="journal">📖</button>
-      <button class="mobile-tab" data-page="timeline">🕰️</button>
-      <button class="mobile-tab" data-page="circle">👪</button>
-      <button class="mobile-tab" data-page="echoes">🌊</button>
-      <button class="mobile-tab" data-page="letters">✉️</button>
-      <button class="mobile-tab" data-page="settings">⚙️</button>
+      <button class="mobile-tab active" data-page="home"><span class="mobile-icon">🏠</span><span class="mobile-label">Home</span></button>
+      <button class="mobile-tab" data-page="journal"><span class="mobile-icon">📖</span><span class="mobile-label">Journal</span></button>
+      <button class="mobile-tab" data-page="timeline"><span class="mobile-icon">🕰️</span><span class="mobile-label">Timeline</span></button>
+      <button class="mobile-tab" data-page="circle"><span class="mobile-icon">👪</span><span class="mobile-label">Circle</span></button>
+      <button class="mobile-tab" data-page="echoes"><span class="mobile-icon">🌊</span><span class="mobile-label">Echoes</span></button>
+      <button class="mobile-tab" data-page="letters"><span class="mobile-icon">✉️</span><span class="mobile-label">Letters</span></button>
+      <button class="mobile-tab" data-page="settings"><span class="mobile-icon">⚙️</span><span class="mobile-label">Settings</span></button>
     </nav>
 
     <aside id="entry-drawer" class="entry-drawer hidden">

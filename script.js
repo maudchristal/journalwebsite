@@ -73,6 +73,7 @@ const ids = {
   sectionChips: $("section-chips"), visibilityGroup: $("visibility-group"), timelineSectionFilter: $("timeline-section-filter"),
   timelineDateFilter: $("timeline-date-filter"), timelineToggleBtn: $("timeline-toggle-btn"), lettersOutboxList: $("letters-outbox-list"),
   echoesFeed: $("echoes-feed"), greetingTitle: $("greeting-title"), continueCard: $("continue-card"), arrivingSoon: $("arriving-soon"),
+  startFirstEntryBtn: $("start-first-entry-btn"),
   authActionButtons: $$('[data-action-label]'),
 };
 
@@ -117,11 +118,12 @@ const setActivePage = (page) => {
   ids.pages.forEach((el) => el.classList.toggle("active", el.dataset.page === page));
   ids.navItems.forEach((el) => el.classList.toggle("active", el.dataset.page === page));
   ids.mobileTabs.forEach((el) => el.classList.toggle("active", el.dataset.page === page));
+  document.title = "Written - Your Personal Journal";
 };
 
 const setAuthUi = () => {
   if (!isFirebaseConfigured()) {
-    ids.authSetupHint.classList.remove("hidden");
+    ids.authSetupHint.classList.add("hidden");
     ids.previewBanner.classList.remove("hidden");
     return;
   }
@@ -211,9 +213,10 @@ const renderEntries = () => {
 
   if (entries.length === 0) {
     ids.entriesList.innerHTML = "<li class='entry-item muted'>Your first entry is waiting to be written.</li>";
-    ids.continueCard.textContent = "No unfinished entry yet. Start a thought and come back anytime.";
-    ids.arrivingSoon.textContent = "No time-released letters are arriving soon.";
-    ids.lettersOutboxList.innerHTML = "<li class='entry-item muted'>No letters scheduled yet.</li>";
+    ids.continueCard.textContent = "Start your first entry and create a small ritual you can return to anytime.";
+    ids.arrivingSoon.textContent = "When you schedule a letter, this space previews what is unlocking next.";
+    ids.lettersOutboxList.innerHTML =
+      "<li class='letters-empty'><h3>Time-release letters</h3><p class='muted'>Write something today and choose when it opens in the future - for your future self, a loved one, or your family timeline.</p><button type='button' id='letters-first-btn' class='secondary-action'>Write your first letter</button></li>";
     return;
   }
 
@@ -245,7 +248,7 @@ const renderTimeline = () => {
     .sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
   ids.timelineList.innerHTML =
     entries.length === 0
-      ? "<li class='timeline-item muted'>No timeline entries for this filter yet.</li>"
+      ? "<li><div class='timeline-empty'><p class='muted'>Your story appears here over time. Each entry becomes a point in your personal timeline.</p><div class='timeline-skeleton-item'><div class='skeleton-line title'></div><div class='skeleton-line meta'></div></div><div class='timeline-skeleton-item'><div class='skeleton-line title'></div><div class='skeleton-line meta'></div></div><div class='timeline-skeleton-item'><div class='skeleton-line title'></div><div class='skeleton-line meta'></div></div></div></li>"
       : entries
           .map((e) => `<li class="timeline-item"><strong>${esc(e.title)}</strong><div>${esc(e.category)} • ${state.timelineMode === "family" ? esc(e.authorName || "Family") : "You"}</div><div class="muted">${fmt(e.createdAt)}</div></li>`)
           .join("");
@@ -402,6 +405,7 @@ on(timelineToggleBtn, "click", () => {
 
 on(newEntryBtn, "click", () => openDrawer(false));
 on(quickWriteBtn, "click", () => openDrawer(false));
+on(ids.startFirstEntryBtn, "click", () => openDrawer(false));
 on(writeLetterBtn, "click", () => openDrawer(true));
 on(entryDrawerClose, "click", closeDrawer);
 on(entryDrawer, "click", (e) => {
@@ -442,6 +446,11 @@ on(sidebarNav, "click", (e) => {
   const target = e.target.closest(".nav-item");
   if (!target) return;
   setActivePage(target.dataset.page);
+});
+on(ids.lettersOutboxList, "click", (e) => {
+  const target = e.target.closest("#letters-first-btn");
+  if (!target) return;
+  openDrawer(true);
 });
 ids.mobileTabs.forEach((tab) => on(tab, "click", () => setActivePage(tab.dataset.page)));
 ids.authActionButtons.forEach((btn) =>
