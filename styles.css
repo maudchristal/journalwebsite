@@ -619,3 +619,72 @@ h1, h2, h3, .logo, .prompt-text, .entry-preview em, .editorial-greeting { font-f
 .mobile-tabbar { backdrop-filter: blur(10px); background: rgba(20, 20, 22, 0.86); }
 .mobile-tab.active { color: #f3e0ca; position: relative; }
 .mobile-tab.active::after { content: ""; width: 5px; height: 5px; border-radius: 50%; background: var(--accent); position: absolute; bottom: 3px; left: 50%; transform: translateX(-50%); }
+
+/* Readability hotfixes */
+.letters-empty {
+  background: #1c1f1a;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+.letters-empty p,
+.letters-empty .muted { color: #a09890; }
+.letters-empty .secondary-action {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #151311;
+}
+
+.toolbar input,
+.toolbar select {
+  background: #1e1c1a;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  color: #e0dbd5;
+}
+.toolbar input::placeholder { color: #6b6560; }
+
+.timeline-empty .muted { color: #9a9490; }
+.skeleton-line {
+  background: rgba(255, 255, 255, 0.08);
+}
+.timeline-skeleton-item::before {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.nav-item { color: #8a8078; }
+.nav-item.active { color: #f0ede6; }
+.logo::after { color: #4a4540; }
+
+.tab[data-letter-tab] {
+  background: transparent;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: #8a8078;
+}
+.tab[data-letter-tab].active {
+  background: #2a2420;
+  border: 1px solid rgba(196, 149, 82, 0.4);
+  color: #c4956a;
+}
+
+.letters-guide .chip {
+  background: #1e1c1a;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  color: #c8c2ba;
+}
+.letters-guide .chip:hover {
+  border-color: rgba(196, 149, 82, 0.4);
+  color: #c4956a;
+}
+
+/* Dark surface guardrail: avoid leftover light-mode surfaces */
+.card,
+.entry-item,
+.global-card,
+.timeline-list,
+.toolbar,
+.tab-row,
+.letters-empty,
+.letters-guide,
+.auth-modal-card,
+.entry-drawer-card,
+.editor-shell {
+  background: #1a1a1c;
+}
