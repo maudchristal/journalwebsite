@@ -9,6 +9,9 @@
       content="A personal, family, and legacy journaling website with optional public storytelling and time-released entries."
     />
     <link rel="icon" type="image/svg+xml" href='data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"%3E%3Crect width="64" height="64" rx="14" fill="%235d29f4"/%3E%3Cpath d="M13 16h10l9 34 9-34h10L39 50h-8L13 16z" fill="%23fff"/%3E%3C/svg%3E' />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700&family=Lora:ital,wght@0,500;0,700;1,400;1,500&display=swap" rel="stylesheet" />
     <link rel="stylesheet" href="styles.css" />
   </head>
   <body>
@@ -27,30 +30,36 @@
         <div>
           <div class="logo">Written</div>
           <nav class="nav-list" id="sidebar-nav">
-            <button class="nav-item active" data-page="home" aria-label="Home">🏠 <span>Home</span></button>
-            <button class="nav-item" data-page="journal" aria-label="My Journal">📖 <span>My Journal</span></button>
-            <button class="nav-item" data-page="timeline" aria-label="Timeline">🕰️ <span>Timeline</span></button>
-            <button class="nav-item" data-page="circle" aria-label="Circle">👪 <span>Circle</span></button>
-            <button class="nav-item" data-page="echoes" aria-label="Echoes">🌊 <span>Echoes</span></button>
-            <button class="nav-item" data-page="global" aria-label="Global">🌍 <span>Global</span></button>
-            <button class="nav-item" data-page="letters" aria-label="Letters">✉️ <span>Letters</span></button>
-            <button class="nav-item" data-page="settings" aria-label="Settings">⚙️ <span>Settings</span></button>
+            <button class="nav-item active" data-page="home" aria-label="Home"><span class="nav-icon"></span><span>Home</span></button>
+            <button class="nav-item" data-page="journal" aria-label="My Journal"><span class="nav-icon"></span><span>My Journal</span></button>
+            <button class="nav-item" data-page="timeline" aria-label="Timeline"><span class="nav-icon"></span><span>Timeline</span></button>
+            <button class="nav-item" data-page="circle" aria-label="Circle"><span class="nav-icon"></span><span>Circle</span></button>
+            <button class="nav-item" data-page="echoes" aria-label="Echoes"><span class="nav-icon"></span><span>Echoes</span></button>
+            <button class="nav-item" data-page="global" aria-label="Global"><span class="nav-icon"></span><span>Global</span></button>
+            <button class="nav-item" data-page="letters" aria-label="Letters"><span class="nav-icon"></span><span>Letters</span></button>
+            <button class="nav-item" data-page="settings" aria-label="Settings"><span class="nav-icon"></span><span>Settings</span></button>
           </nav>
         </div>
         <div class="user-chip">
           <div class="avatar" id="user-avatar">W</div>
           <div>
             <strong id="sidebar-user-name">Guest Writer</strong>
+            <p class="muted user-status">Personal · Private</p>
           </div>
         </div>
       </aside>
 
       <main id="main-content" class="page-area">
         <section class="page active" data-page="home">
-          <div class="page-head">
-            <h1 id="greeting-title">Good evening, Writer</h1>
+          <div class="page-head home-head">
+            <h1 id="greeting-title" class="editorial-greeting">Good evening, <span class="accent-name">Writer</span>.</h1>
             <button class="primary-action" id="quick-write-btn">Quick Write</button>
           </div>
+          <article class="card write-card">
+            <h3>Write Card</h3>
+            <p id="daily-prompt" class="prompt-text">What did today teach you that yesterday could not?</p>
+            <textarea id="daily-prompt-input" rows="2" placeholder="Start from the prompt, then follow your own thread..."></textarea>
+          </article>
           <div class="grid-home">
             <article class="card">
               <h3>Continue where you left off</h3>
@@ -64,12 +73,20 @@
             <article class="card">
               <h3>Circle updates</h3>
               <ul id="circle-updates" class="list">
-                <li class="muted">No shared entries yet from your Circle.</li>
+                <li class="muted">Your people will appear here.</li>
               </ul>
             </article>
             <article class="card">
-              <h3>Echoes highlight</h3>
-              <p id="echoes-highlight" class="muted">Opt into Echoes to see anonymous emotional matches.</p>
+              <h3>Echoes this week</h3>
+              <div class="chip-group">
+                <button type="button" class="emotion-pill grief" data-page-link="echoes">14 writing about Grief</button>
+                <button type="button" class="emotion-pill love" data-page-link="echoes">48 writing about Love</button>
+              </div>
+            </article>
+            <article class="card global-teaser">
+              <h3>Global - Active Biographies</h3>
+              <p class="muted">Living documents written by many. History in real time.</p>
+              <button type="button" class="secondary-action" data-page-link="global">Explore -></button>
             </article>
           </div>
         </section>
@@ -81,14 +98,14 @@
           </div>
           <div class="journal-layout">
             <aside class="card section-tabs" id="section-tabs">
-              <button class="section-tab active" data-section="All">All</button>
-              <button class="section-tab" data-section="Love">Love</button>
-              <button class="section-tab" data-section="Career">Career</button>
-              <button class="section-tab" data-section="Lessons">Lessons</button>
-              <button class="section-tab" data-section="Friendships">Friendships</button>
-              <button class="section-tab" data-section="Big Moments">Big Moments</button>
-              <button class="section-tab" data-section="Gratitude">Gratitude</button>
-              <button class="section-tab" data-section="Letters">Letters</button>
+              <button class="section-tab active" data-section="All"><span class="section-dot all"></span>All</button>
+              <button class="section-tab" data-section="Love"><span class="section-dot love"></span>Love</button>
+              <button class="section-tab" data-section="Career"><span class="section-dot career"></span>Career</button>
+              <button class="section-tab" data-section="Lessons"><span class="section-dot lessons"></span>Lessons</button>
+              <button class="section-tab" data-section="Friendships"><span class="section-dot friendships"></span>Friendships</button>
+              <button class="section-tab" data-section="Big Moments"><span class="section-dot moments"></span>Big Moments</button>
+              <button class="section-tab" data-section="Gratitude"><span class="section-dot gratitude"></span>Gratitude</button>
+              <button class="section-tab" data-section="Letters"><span class="section-dot letters"></span>Letters</button>
             </aside>
             <section class="card">
               <ul id="entries-list" class="list"></ul>
@@ -294,14 +311,14 @@
     </div>
 
     <nav class="mobile-tabbar" id="mobile-tabbar">
-      <button class="mobile-tab active" data-page="home"><span class="mobile-icon">🏠</span><span class="mobile-label">Home</span></button>
-      <button class="mobile-tab" data-page="journal"><span class="mobile-icon">📖</span><span class="mobile-label">Journal</span></button>
-      <button class="mobile-tab" data-page="timeline"><span class="mobile-icon">🕰️</span><span class="mobile-label">Timeline</span></button>
-      <button class="mobile-tab" data-page="circle"><span class="mobile-icon">👪</span><span class="mobile-label">Circle</span></button>
-      <button class="mobile-tab" data-page="echoes"><span class="mobile-icon">🌊</span><span class="mobile-label">Echoes</span></button>
-      <button class="mobile-tab" data-page="global"><span class="mobile-icon">🌍</span><span class="mobile-label">Global</span></button>
-      <button class="mobile-tab" data-page="letters"><span class="mobile-icon">✉️</span><span class="mobile-label">Letters</span></button>
-      <button class="mobile-tab" data-page="settings"><span class="mobile-icon">⚙️</span><span class="mobile-label">Settings</span></button>
+      <button class="mobile-tab active" data-page="home"><span class="mobile-icon"></span><span class="mobile-label">Home</span></button>
+      <button class="mobile-tab" data-page="journal"><span class="mobile-icon"></span><span class="mobile-label">Journal</span></button>
+      <button class="mobile-tab" data-page="timeline"><span class="mobile-icon"></span><span class="mobile-label">Timeline</span></button>
+      <button class="mobile-tab" data-page="circle"><span class="mobile-icon"></span><span class="mobile-label">Circle</span></button>
+      <button class="mobile-tab" data-page="echoes"><span class="mobile-icon"></span><span class="mobile-label">Echoes</span></button>
+      <button class="mobile-tab" data-page="global"><span class="mobile-icon"></span><span class="mobile-label">Global</span></button>
+      <button class="mobile-tab" data-page="letters"><span class="mobile-icon"></span><span class="mobile-label">Letters</span></button>
+      <button class="mobile-tab" data-page="settings"><span class="mobile-icon"></span><span class="mobile-label">Settings</span></button>
     </nav>
 
     <aside id="entry-drawer" class="entry-drawer hidden">

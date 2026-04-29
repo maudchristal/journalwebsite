@@ -120,6 +120,7 @@ const ids = {
   globalModalClose: $("global-modal-close"), createBioBtn: $("create-bio-btn"), bioSubjectInput: $("bio-subject-input"),
   bioTaglineInput: $("bio-tagline-input"), bioCategoryInput: $("bio-category-input"), bioCoverInput: $("bio-cover-input"),
   echoesFeed: $("echoes-feed"), greetingTitle: $("greeting-title"), continueCard: $("continue-card"), arrivingSoon: $("arriving-soon"),
+  dailyPrompt: $("daily-prompt"), dailyPromptInput: $("daily-prompt-input"),
   entryBodyEditor: $("entry-body-editor"), entryWordCount: $("entry-word-count"), editorToolbar: document.querySelector(".editor-toolbar"),
   startFirstEntryBtn: $("start-first-entry-btn"),
   continueGuestBtn: $("continue-guest-btn"),
@@ -165,6 +166,17 @@ const isFirebaseConfigured = () => Boolean(firebaseConfig.apiKey && firebaseConf
 const normalizeDate = (e) => (e.createdAt && typeof e.createdAt.toDate === "function" ? e.createdAt.toDate().toISOString() : String(e.createdAt || new Date().toISOString()));
 const fmt = (iso) => new Date(iso).toLocaleString();
 const fmtShort = (iso) => new Date(iso).toLocaleDateString();
+const fmtRelative = (iso) => {
+  const diff = Date.now() - new Date(iso).getTime();
+  const mins = Math.floor(diff / 60000);
+  if (mins < 1) return "just now";
+  if (mins < 60) return `${mins}m ago`;
+  const hrs = Math.floor(mins / 60);
+  if (hrs < 24) return `${hrs}h ago`;
+  const days = Math.floor(hrs / 24);
+  if (days < 7) return `${days}d ago`;
+  return fmtShort(iso);
+};
 const isReleased = (e) => !e.isScheduled || Date.now() >= new Date(e.releaseDate).getTime();
 const getStatus = (e) => (e.isDraft ? "draft" : !e.isScheduled ? "published" : isReleased(e) ? "delivered" : "time-locked");
 const esc = (v) => String(v).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/\"/g, "&quot;");
@@ -223,6 +235,12 @@ const seedGlobalBios = () => {
   ];
   persistGlobalBios();
 };
+const DAILY_PROMPTS = [
+  "What did today teach you that yesterday could not?",
+  "Which version of you showed up today, and why?",
+  "What are you quietly carrying that deserves words?",
+  "Name one moment you want to remember in ten years.",
+];
 const persistSettings = () => localStorage.setItem(SETTINGS_KEY, JSON.stringify(state.settings));
 const persistGlobalBios = () => localStorage.setItem(GLOBAL_BIO_KEY, JSON.stringify(state.globalBios));
 const normalizeUsername = (v) => String(v || "").trim().toLowerCase();
@@ -329,7 +347,7 @@ const setAuthUi = () => {
   const name =
     state.user?.displayName?.trim() ||
     (state.user?.email ? state.user.email.split("@")[0] : state.settings.displayName?.trim() || "Writer");
-  ids.greetingTitle.textContent = `Good ${part}, ${name}`;
+  ids.greetingTitle.innerHTML = `Good ${part}, <span class="accent-name">${esc(name)}</span>.`;
 };
 
 const showAuthModal = (action = "save your story") => {
@@ -455,7 +473,10 @@ const renderEntries = () => {
   ids.continueCard.textContent = `Continue "${entries[0].title}" from ${fmtShort(entries[0].createdAt)}.`;
 
   ids.entriesList.innerHTML = entries
-    .map((e) => `<li class="entry-item"><div class="entry-head"><span class="pill">${esc(e.category)}</span><span class="status-badge">${getStatus(e)}</span></div><h3>${esc(e.title)}</h3><p class="entry-preview">${esc(e.body || "").slice(0, 170)}...</p><p class="muted">${fmt(e.createdAt)} • <span class="pill">${esc(e.audience || "Self")}</span></p></li>`)
+    .map((e) => {
+      const sectionClass = String(e.category || "").toLowerCase().replace(/\s+/g, "-");
+      return `<li class="entry-item"><div class="entry-head"><span class="section-dot ${esc(sectionClass)}"></span><span class="pill">${esc(e.category)}</span><span class="status-badge">${getStatus(e)}</span></div><h3>${esc(e.title)}</h3><p class="entry-preview"><em>${esc(e.body || "").slice(0, 170)}...</em></p><p class="muted">${fmtRelative(e.createdAt)} • <span class="pill">${esc(e.audience || "Self")}</span></p></li>`;
+    })
     .join("");
 
   ids.lettersOutboxList.innerHTML = entries
@@ -870,6 +891,15 @@ on(ids.bioContributions, "click", (e) => {
   if (!target) return;
   alert("Thanks. This contribution has been flagged for review.");
 });
+on(ids.dailyPromptInput, "input", () => {
+  ids.dailyPromptInput.style.height = "auto";
+  ids.dailyPromptInput.style.height = `${Math.max(88, ids.dailyPromptInput.scrollHeight)}px`;
+});
+document.body.addEventListener("click", (e) => {
+  const link = e.target.closest("[data-page-link]");
+  if (!link) return;
+  setActivePage(link.dataset.pageLink);
+});
 
 on(newEntryBtn, "click", () => openDrawer(false));
 on(quickWriteBtn, "click", () => openDrawer(false));
@@ -942,6 +972,10 @@ parseSettings();
 parseGlobalBios();
 seedGlobalBios();
 applySettingsToUi();
+if (ids.dailyPrompt) {
+  const dayIndex = new Date().getDay() % DAILY_PROMPTS.length;
+  ids.dailyPrompt.textContent = DAILY_PROMPTS[dayIndex];
+}
 updateEditorMetrics();
 setActivePage(state.activePage);
 ids.sectionTabs.forEach((el) => el.classList.toggle("active", el.dataset.section === state.journalSection));
