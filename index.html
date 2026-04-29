@@ -299,36 +299,12 @@
         </div>
         <div id="auth-bar" class="auth-bar hidden">
           <div id="auth-guest-panel" class="auth-guest-panel">
-            <form id="auth-form" class="auth-form" autocomplete="on">
-              <div class="auth-stack">
-                <label class="sr-only" for="auth-display-name">Display name</label>
-                <input
-                  id="auth-display-name"
-                  type="text"
-                  name="displayName"
-                  autocomplete="name"
-                  placeholder="Display name (optional)"
-                />
-                <label class="sr-only" for="auth-email">Email</label>
-                <input id="auth-email" type="email" name="email" autocomplete="username" placeholder="Email" required />
-                <label class="sr-only" for="auth-password">Password</label>
-                <input
-                  id="auth-password"
-                  type="password"
-                  name="password"
-                  autocomplete="current-password"
-                  placeholder="Password (min 6 characters)"
-                  required
-                  minlength="6"
-                />
-                <button type="button" id="sign-in-btn">Sign in</button>
-                <button type="button" id="sign-up-btn" class="secondary">Create account</button>
-              </div>
-            </form>
-            <p class="auth-or muted" role="separator">or</p>
-            <button type="button" id="google-sign-in-btn" class="google-sign-in-btn">
-              Continue with Google
-            </button>
+            <p class="muted auth-google-hint">Sign in with Google to save and sync your journal.</p>
+            <div class="auth-stack">
+              <button type="button" id="google-sign-in-btn" class="google-sign-in-btn">
+                Continue with Google
+              </button>
+            </div>
           </div>
           <div id="auth-signed-in" class="auth-signed-in hidden">
             <span id="auth-user-label"></span>

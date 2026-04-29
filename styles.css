@@ -285,6 +285,7 @@ textarea { min-height: 180px; font-size: 1.05rem; line-height: 1.65; }
 .onboarding-dot.active { background: #5d29f4; }
 .onboarding-actions { display: flex; justify-content: space-between; margin-top: 0.9rem; gap: 0.45rem; }
 .auth-stack { display: grid; gap: 0.45rem; }
+.auth-google-hint { margin: 0 0 0.75rem; text-align: center; }
 .auth-modal.hidden, .entry-drawer.hidden { display: none !important; }
 .auth-modal-close { float: right; margin: 0; box-shadow: none; background: transparent; color: #52388d; border: 0; font-size: 1.2rem; }
 .banner {

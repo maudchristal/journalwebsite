@@ -2,12 +2,9 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.14.1/fireba
 import {
   getAuth,
   onAuthStateChanged,
-  createUserWithEmailAndPassword,
-  signInWithEmailAndPassword,
   signInWithPopup,
   signOut,
   GoogleAuthProvider,
-  updateProfile,
 } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js";
 import { getFirestore, collection, query, orderBy, onSnapshot, addDoc } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js";
 import { firebaseConfig } from "./firebase-config.js";
@@ -61,9 +58,8 @@ const onboardingSlides = [
 const ids = {
   form: $("entry-form"), entriesList: $("entries-list"), timelineList: $("timeline-list"),
   previewBanner: $("preview-banner"), authSetupHint: $("auth-setup-hint"), authBar: $("auth-bar"),
-  authGuestPanel: $("auth-guest-panel"), authSignedInPanel: $("auth-signed-in"), authDisplayName: $("auth-display-name"),
-  authEmail: $("auth-email"), authPassword: $("auth-password"), authUserLabel: $("auth-user-label"),
-  sidebarUserName: $("sidebar-user-name"), signInBtn: $("sign-in-btn"), signUpBtn: $("sign-up-btn"),
+  authGuestPanel: $("auth-guest-panel"), authSignedInPanel: $("auth-signed-in"), authUserLabel: $("auth-user-label"),
+  sidebarUserName: $("sidebar-user-name"),
   signOutBtn: $("sign-out-btn"), googleSignInBtn: $("google-sign-in-btn"), bannerSignInBtn: $("banner-sign-in-btn"),
   authModal: $("auth-modal"), authModalClose: $("auth-modal-close"), authContextTitle: $("auth-context-title"),
   authContextCopy: $("auth-context-copy"), onboardingPanel: $("onboarding-panel"), authLoginPanel: $("auth-login-panel"),
@@ -84,8 +80,6 @@ const ids = {
 const form = ids.form;
 
 const {
-  signInBtn,
-  signUpBtn,
   googleSignInBtn,
   signOutBtn,
   releaseTarget,
@@ -297,37 +291,6 @@ if (isFirebaseConfigured()) {
   setAuthUi();
   rerender();
 }
-
-on(signInBtn, "click", async () => {
-  if (!state.auth) return;
-  const email = String(ids.authEmail.value || "").trim();
-  const password = String(ids.authPassword.value || "");
-  if (!email || !password) return alert("Enter email and password.");
-  try {
-    await signInWithEmailAndPassword(state.auth, email, password);
-    state.onboardingCompleted = true;
-    hideAuthModal();
-  } catch (e) {
-    alert(e.message || "Sign-in failed.");
-  }
-});
-
-on(signUpBtn, "click", async () => {
-  if (!state.auth) return;
-  const email = String(ids.authEmail.value || "").trim();
-  const password = String(ids.authPassword.value || "");
-  const displayName = String(ids.authDisplayName.value || "").trim();
-  if (!email || !password) return alert("Enter email and password.");
-  if (password.length < 6) return alert("Password should be at least 6 characters.");
-  try {
-    const { user } = await createUserWithEmailAndPassword(state.auth, email, password);
-    if (displayName) await updateProfile(user, { displayName });
-    state.onboardingCompleted = true;
-    hideAuthModal();
-  } catch (e) {
-    alert(e.message || "Sign-up failed.");
-  }
-});
 
 on(googleSignInBtn, "click", async () => {
   if (!state.auth) return;
