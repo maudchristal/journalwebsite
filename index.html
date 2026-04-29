@@ -112,7 +112,24 @@
               <option value="Letters">Letters</option>
             </select>
             <input id="timeline-person-filter" type="text" placeholder="Filter by person" />
-            <input id="timeline-date-filter" type="month" />
+            <input id="timeline-year-filter" type="number" min="1900" max="2100" placeholder="Year" />
+            <select id="timeline-month-filter">
+              <option value="">Month</option>
+              <option value="1">Jan</option>
+              <option value="2">Feb</option>
+              <option value="3">Mar</option>
+              <option value="4">Apr</option>
+              <option value="5">May</option>
+              <option value="6">Jun</option>
+              <option value="7">Jul</option>
+              <option value="8">Aug</option>
+              <option value="9">Sep</option>
+              <option value="10">Oct</option>
+              <option value="11">Nov</option>
+              <option value="12">Dec</option>
+            </select>
+            <input id="timeline-day-filter" type="number" min="1" max="31" placeholder="Day" />
+            <input id="timeline-time-filter" type="time" step="60" />
           </div>
           <ul id="timeline-list" class="timeline-list card"></ul>
         </section>
@@ -141,20 +158,27 @@
           </div>
           <div class="echoes-layout">
             <section class="card">
-              <div class="tab-row">
-                <button class="tab active">Grief</button>
-                <button class="tab">Joy</button>
-                <button class="tab">Love</button>
-                <button class="tab">Uncertainty</button>
-                <button class="tab">Growth</button>
+              <div class="tab-row emotion-tags">
+                <button class="emotion-pill grief active" type="button">Grief</button>
+                <button class="emotion-pill joy" type="button">Joy</button>
+                <button class="emotion-pill love" type="button">Love</button>
+                <button class="emotion-pill uncertainty" type="button">Uncertainty</button>
+                <button class="emotion-pill growth" type="button">Growth</button>
               </div>
               <ul id="echoes-feed" class="list">
                 <li class="muted">No echoes yet. Turn on opt-in to see anonymous thematic matches.</li>
               </ul>
             </section>
-            <aside class="card">
+            <aside class="card theme-map-preview">
               <h3>Theme map</h3>
-              <p class="muted">Your most common themes will appear as a soft word cloud/bar view here.</p>
+              <p class="muted">Your most common themes will appear here once Echoes has enough entries.</p>
+              <div class="theme-skeleton" aria-hidden="true">
+                <span class="theme-chip lg">Healing</span>
+                <span class="theme-chip md">Family</span>
+                <span class="theme-chip sm">Hope</span>
+                <span class="theme-chip md">Change</span>
+                <span class="theme-chip sm">Gratitude</span>
+              </div>
             </aside>
           </div>
         </section>
@@ -182,10 +206,35 @@
             <button class="primary-action" id="save-settings-btn" data-action-label="save settings">Save</button>
           </div>
           <div class="settings-grid">
-            <article class="card"><h3>Profile</h3><p class="muted">Name, avatar, bio.</p></article>
-            <article class="card"><h3>Visibility defaults</h3><p class="muted">Default privacy for new entries.</p></article>
+            <article class="card">
+              <h3>Profile</h3>
+              <label for="settings-display-name">Display name</label>
+              <input id="settings-display-name" type="text" placeholder="How your name appears in Written" required />
+              <label for="settings-username">Username</label>
+              <input id="settings-username" type="text" placeholder="Unique handle (3-24 chars)" required />
+              <p class="muted settings-help">Use lowercase letters, numbers, `_` or `.` (example: maud.writes)</p>
+              <p id="settings-status" class="muted settings-status"></p>
+              <label for="settings-bio">Bio</label>
+              <textarea id="settings-bio" rows="3" placeholder="A short note about your voice, values, or story."></textarea>
+            </article>
+            <article class="card">
+              <h3>Visibility defaults</h3>
+              <p class="muted">Choose the default audience for new entries.</p>
+              <div id="settings-visibility-group" class="visibility-group">
+                <button type="button" class="visibility-btn active" data-default-audience="Self">🔒 Only Me</button>
+                <button type="button" class="visibility-btn" data-default-audience="Family">👨‍👩‍👧 Family</button>
+                <button type="button" class="visibility-btn" data-default-audience="Public">🌍 Public</button>
+              </div>
+            </article>
             <article class="card"><h3>Family & Circle</h3><p class="muted">Manage connections and invites.</p></article>
-            <article class="card"><h3>Echoes</h3><p class="muted">Opt-in controls for anonymous matching.</p></article>
+            <article class="card">
+              <h3>Echoes</h3>
+              <p class="muted">Set your default for anonymous thematic matching.</p>
+              <div class="row">
+                <input id="settings-default-echoes-opt-in" type="checkbox" />
+                <label for="settings-default-echoes-opt-in">Contribute new entries to Echoes by default</label>
+              </div>
+            </article>
             <article class="card"><h3>AI Reflection</h3><p class="muted">Tone and preference settings.</p></article>
             <article class="card"><h3>Notifications</h3><p class="muted">Letters, unlocks, and reminder controls.</p></article>
             <article class="card"><h3>Connected accounts</h3><p class="muted">Google and future phone/text delivery.</p></article>
@@ -278,13 +327,13 @@
         <button id="auth-modal-close" class="auth-modal-close" type="button" aria-label="Close">×</button>
         <div id="onboarding-panel" class="onboarding-panel">
           <p class="eyebrow-dark">WELCOME TO WRITTEN</p>
+          <div id="onboarding-illustration" class="onboarding-illustration" aria-hidden="true">🕊️</div>
           <h2 id="auth-modal-title">A journal for real life, not perfect life.</h2>
           <p id="onboarding-copy" class="muted">
             Start private by default. Nothing is shared unless you choose to share it.
           </p>
           <div class="onboarding-progress">
             <span class="onboarding-dot active"></span>
-            <span class="onboarding-dot"></span>
             <span class="onboarding-dot"></span>
             <span class="onboarding-dot"></span>
           </div>
@@ -297,7 +346,10 @@
         <div id="auth-login-panel" class="hidden">
           <h2 id="auth-context-title">Sign in to save your story</h2>
           <p id="auth-context-copy" class="muted">You can explore everything first. Sign in when you are ready to keep what you write.</p>
-          <button id="back-to-onboarding-btn" type="button" class="secondary">Back to onboarding</button>
+          <div class="auth-login-actions">
+            <button id="back-to-onboarding-btn" type="button" class="secondary">Back to onboarding</button>
+            <button id="continue-guest-btn" type="button" class="secondary">Continue as guest</button>
+          </div>
         </div>
         <div id="auth-bar" class="auth-bar hidden">
           <div id="auth-guest-panel" class="auth-guest-panel">

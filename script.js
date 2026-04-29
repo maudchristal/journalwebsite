@@ -6,11 +6,25 @@ import {
   signOut,
   GoogleAuthProvider,
 } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js";
-import { getFirestore, collection, query, orderBy, onSnapshot, addDoc } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js";
+import {
+  getFirestore,
+  collection,
+  query,
+  orderBy,
+  onSnapshot,
+  addDoc,
+  doc,
+  getDoc,
+  runTransaction,
+  serverTimestamp,
+} from "https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js";
 import { firebaseConfig } from "./firebase-config.js";
 
 const NAV_KEY = "written_active_page";
 const JOURNAL_SECTION_KEY = "written_journal_section";
+const SETTINGS_KEY = "written_settings";
+const PROFILE_DOC_ID = "main";
+const USERNAME_RE = /^[a-z0-9._]{3,24}$/;
 const REPLICATE_PROXY_URL = "https://itp-ima-replicate-proxy.web.app/api/create_n_get";
 const AI_REFLECTION_MODEL = "meta/meta-llama-3-8b-instruct";
 const authToken = "";
@@ -46,13 +60,31 @@ const state = {
   activePage: localStorage.getItem(NAV_KEY) || "home",
   journalSection: localStorage.getItem(JOURNAL_SECTION_KEY) || "All",
   timelineMode: "my",
+  settings: {
+    displayName: "",
+    username: "",
+    bio: "",
+    defaultAudience: "Self",
+    defaultEchoesOptIn: false,
+  },
 };
 
 const onboardingSlides = [
-  "Start private by default. Nothing is shared unless you choose to share it.",
-  "Share selectively: only you, family, or public when the moment feels right.",
-  "Write letters for the future and set when they should arrive.",
-  "Reflect gently with AI when you opt in - always your choice, never forced.",
+  {
+    icon: "🕊️",
+    title: "A journal for real life, not perfect life.",
+    copy: "Write freely in a private space that meets you where you are.",
+  },
+  {
+    icon: "🧭",
+    title: "One home for your story.",
+    copy: "Journal, letters, circle, timeline, and echoes all connect to the same living story.",
+  },
+  {
+    icon: "🔐",
+    title: "Privacy first, always your choice.",
+    copy: "Everything starts private by default, and you choose what to share and when.",
+  },
 ];
 
 const ids = {
@@ -63,7 +95,8 @@ const ids = {
   signOutBtn: $("sign-out-btn"), googleSignInBtn: $("google-sign-in-btn"), bannerSignInBtn: $("banner-sign-in-btn"),
   authModal: $("auth-modal"), authModalClose: $("auth-modal-close"), authContextTitle: $("auth-context-title"),
   authContextCopy: $("auth-context-copy"), onboardingPanel: $("onboarding-panel"), authLoginPanel: $("auth-login-panel"),
-  onboardingCopy: $("onboarding-copy"), onboardingNextBtn: $("onboarding-next-btn"), onboardingBackBtn: $("onboarding-back-btn"),
+  onboardingTitle: $("auth-modal-title"), onboardingCopy: $("onboarding-copy"), onboardingIllustration: $("onboarding-illustration"),
+  onboardingNextBtn: $("onboarding-next-btn"), onboardingBackBtn: $("onboarding-back-btn"),
   backToOnboardingBtn: $("back-to-onboarding-btn"), onboardingDots: $$(".onboarding-dot"), sidebarNav: $("sidebar-nav"),
   navItems: $$(".nav-item"), mobileTabs: $$(".mobile-tab"), pages: $$(".page"), sectionTabs: $$(".section-tab"),
   circleTabs: $$('[data-circle-tab]'), letterTabs: $$('[data-letter-tab]'), newEntryBtn: $("new-entry-btn"),
@@ -71,9 +104,16 @@ const ids = {
   entryDrawerClose: $("entry-drawer-close"), scheduleToggleBtn: $("schedule-toggle-btn"), scheduleToggle: $("schedule-toggle"),
   scheduleOptions: $("schedule-options"), releaseTarget: $("release-target"), individualOptions: $("individual-options"),
   sectionChips: $("section-chips"), visibilityGroup: $("visibility-group"), timelineSectionFilter: $("timeline-section-filter"),
-  timelineDateFilter: $("timeline-date-filter"), timelineToggleBtn: $("timeline-toggle-btn"), lettersOutboxList: $("letters-outbox-list"),
+  timelinePersonFilter: $("timeline-person-filter"), timelineYearFilter: $("timeline-year-filter"), timelineMonthFilter: $("timeline-month-filter"),
+  timelineDayFilter: $("timeline-day-filter"), timelineTimeFilter: $("timeline-time-filter"), timelineToggleBtn: $("timeline-toggle-btn"),
+  lettersOutboxList: $("letters-outbox-list"),
   echoesFeed: $("echoes-feed"), greetingTitle: $("greeting-title"), continueCard: $("continue-card"), arrivingSoon: $("arriving-soon"),
   startFirstEntryBtn: $("start-first-entry-btn"),
+  continueGuestBtn: $("continue-guest-btn"),
+  settingsDisplayName: $("settings-display-name"), settingsUsername: $("settings-username"), settingsBio: $("settings-bio"),
+  settingsVisibilityGroup: $("settings-visibility-group"), settingsEchoesOptIn: $("settings-default-echoes-opt-in"),
+  settingsStatus: $("settings-status"),
+  saveSettingsBtn: $("save-settings-btn"),
   authActionButtons: $$('[data-action-label]'),
 };
 
@@ -88,7 +128,11 @@ const {
   sectionChips,
   visibilityGroup,
   timelineSectionFilter,
-  timelineDateFilter,
+  timelinePersonFilter,
+  timelineYearFilter,
+  timelineMonthFilter,
+  timelineDayFilter,
+  timelineTimeFilter,
   timelineToggleBtn,
   newEntryBtn,
   quickWriteBtn,
@@ -111,6 +155,86 @@ const fmtShort = (iso) => new Date(iso).toLocaleDateString();
 const isReleased = (e) => !e.isScheduled || Date.now() >= new Date(e.releaseDate).getTime();
 const getStatus = (e) => (e.isDraft ? "draft" : !e.isScheduled ? "published" : isReleased(e) ? "delivered" : "time-locked");
 const esc = (v) => String(v).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/\"/g, "&quot;");
+const parseSettings = () => {
+  try {
+    const raw = localStorage.getItem(SETTINGS_KEY);
+    if (!raw) return;
+    const parsed = JSON.parse(raw);
+    state.settings = {
+      ...state.settings,
+      ...parsed,
+      username: String(parsed?.username || "").toLowerCase(),
+      defaultAudience: ["Self", "Family", "Public"].includes(parsed?.defaultAudience) ? parsed.defaultAudience : "Self",
+      defaultEchoesOptIn: Boolean(parsed?.defaultEchoesOptIn),
+    };
+  } catch (err) {
+    console.error("Could not parse settings:", err);
+  }
+};
+const persistSettings = () => localStorage.setItem(SETTINGS_KEY, JSON.stringify(state.settings));
+const normalizeUsername = (v) => String(v || "").trim().toLowerCase();
+const setSettingsStatus = (message = "", type = "") => {
+  if (!ids.settingsStatus) return;
+  ids.settingsStatus.textContent = message;
+  ids.settingsStatus.classList.remove("success", "error");
+  if (type) ids.settingsStatus.classList.add(type);
+};
+const applySettingsToUi = () => {
+  if (ids.settingsDisplayName) ids.settingsDisplayName.value = state.settings.displayName || "";
+  if (ids.settingsUsername) ids.settingsUsername.value = state.settings.username || "";
+  if (ids.settingsBio) ids.settingsBio.value = state.settings.bio || "";
+  if (ids.settingsEchoesOptIn) ids.settingsEchoesOptIn.checked = Boolean(state.settings.defaultEchoesOptIn);
+  if (ids.settingsVisibilityGroup) {
+    ids.settingsVisibilityGroup.querySelectorAll(".visibility-btn").forEach((btn) => {
+      btn.classList.toggle("active", btn.dataset.defaultAudience === state.settings.defaultAudience);
+    });
+  }
+  if ($("entry-audience")) $("entry-audience").value = state.settings.defaultAudience;
+  if ($("echoes-opt-in")) $("echoes-opt-in").checked = Boolean(state.settings.defaultEchoesOptIn);
+  if (ids.visibilityGroup) {
+    ids.visibilityGroup.querySelectorAll(".visibility-btn").forEach((btn) => {
+      btn.classList.toggle("active", btn.dataset.audience === state.settings.defaultAudience);
+    });
+  }
+};
+const claimUsername = async ({ uid, username, displayName, bio }) => {
+  const clean = normalizeUsername(username);
+  if (!USERNAME_RE.test(clean)) throw new Error("Username must be 3-24 chars: lowercase letters, numbers, '.' or '_'.");
+  const profileRef = doc(state.db, "users", uid, "profile", PROFILE_DOC_ID);
+  const usernameRef = doc(state.db, "usernames", clean);
+  await runTransaction(state.db, async (tx) => {
+    const [nameSnap, profileSnap] = await Promise.all([tx.get(usernameRef), tx.get(profileRef)]);
+    const existingOwner = nameSnap.exists() ? nameSnap.data().uid : null;
+    const existingProfile = profileSnap.exists() ? profileSnap.data() : null;
+    if (existingOwner && existingOwner !== uid) throw new Error("That username is already taken.");
+    if (existingProfile?.username && existingProfile.username !== clean) throw new Error("Username is locked after initial claim.");
+    tx.set(usernameRef, { uid, claimedAt: serverTimestamp() }, { merge: true });
+    tx.set(
+      profileRef,
+      {
+        uid,
+        username: clean,
+        displayName: String(displayName || "").trim(),
+        bio: String(bio || "").trim(),
+        updatedAt: serverTimestamp(),
+      },
+      { merge: true }
+    );
+  });
+  return clean;
+};
+const loadUserProfile = async (uid) => {
+  if (!state.db) return;
+  const profileRef = doc(state.db, "users", uid, "profile", PROFILE_DOC_ID);
+  const snap = await getDoc(profileRef);
+  if (!snap.exists()) return;
+  const data = snap.data();
+  state.settings.displayName = String(data.displayName || state.settings.displayName || "");
+  state.settings.username = normalizeUsername(data.username || state.settings.username || "");
+  state.settings.bio = String(data.bio || state.settings.bio || "");
+  persistSettings();
+  applySettingsToUi();
+};
 
 const setActivePage = (page) => {
   state.activePage = page;
@@ -122,27 +246,30 @@ const setActivePage = (page) => {
 };
 
 const setAuthUi = () => {
-  if (!isFirebaseConfigured()) {
+  const firebaseReady = isFirebaseConfigured();
+  if (!firebaseReady) {
     ids.authSetupHint.classList.add("hidden");
     ids.previewBanner.classList.remove("hidden");
-    return;
+  } else {
+    ids.authSetupHint.classList.add("hidden");
   }
-  ids.authSetupHint.classList.add("hidden");
-  const signedIn = Boolean(state.user);
+  const signedIn = firebaseReady && Boolean(state.user);
   ids.authGuestPanel.classList.toggle("hidden", signedIn);
   ids.authSignedInPanel.classList.toggle("hidden", !signedIn);
-  ids.previewBanner.classList.toggle("hidden", signedIn);
+  ids.previewBanner.classList.toggle("hidden", signedIn && firebaseReady);
   if (signedIn) {
     const who = state.user.displayName?.trim() || state.user.email || state.user.uid;
     ids.authUserLabel.textContent = `Signed in as ${who}`;
     ids.sidebarUserName.textContent = who;
   } else {
     ids.authUserLabel.textContent = "";
-    ids.sidebarUserName.textContent = "Guest Writer";
+    ids.sidebarUserName.textContent = state.settings.displayName?.trim() || "Guest Writer";
   }
   const hour = new Date().getHours();
   const part = hour < 12 ? "morning" : hour < 18 ? "afternoon" : "evening";
-  const name = state.user?.displayName?.trim() || (state.user?.email ? state.user.email.split("@")[0] : "Writer");
+  const name =
+    state.user?.displayName?.trim() ||
+    (state.user?.email ? state.user.email.split("@")[0] : state.settings.displayName?.trim() || "Writer");
   ids.greetingTitle.textContent = `Good ${part}, ${name}`;
 };
 
@@ -172,7 +299,10 @@ const hideAuthModal = () => {
 };
 
 const updateOnboarding = () => {
-  ids.onboardingCopy.textContent = onboardingSlides[state.onboardingStep];
+  const slide = onboardingSlides[state.onboardingStep];
+  if (ids.onboardingTitle) ids.onboardingTitle.textContent = slide.title;
+  ids.onboardingCopy.textContent = slide.copy;
+  if (ids.onboardingIllustration) ids.onboardingIllustration.textContent = slide.icon;
   ids.onboardingDots.forEach((dot, i) => dot.classList.toggle("active", i === state.onboardingStep));
   ids.onboardingBackBtn.classList.toggle("hidden", state.onboardingStep === 0);
   ids.onboardingNextBtn.textContent = state.onboardingStep === onboardingSlides.length - 1 ? "Continue to sign in" : "Next";
@@ -193,15 +323,16 @@ const clearForm = () => {
   if (!form) return;
   form.reset();
   $("entry-category").value = "Love";
-  $("entry-audience").value = "Self";
+  $("entry-audience").value = state.settings.defaultAudience;
   ids.sectionChips.querySelectorAll(".chip").forEach((el) => el.classList.remove("active"));
   ids.visibilityGroup.querySelectorAll(".visibility-btn").forEach((el) => el.classList.remove("active"));
   ids.sectionChips.querySelector('[data-category="Love"]')?.classList.add("active");
-  ids.visibilityGroup.querySelector('[data-audience="Self"]')?.classList.add("active");
+  ids.visibilityGroup.querySelector(`[data-audience="${state.settings.defaultAudience}"]`)?.classList.add("active");
   ids.scheduleToggle.checked = false;
   ids.scheduleOptions.classList.add("hidden");
   ids.scheduleToggleBtn.classList.remove("open");
   ids.individualOptions.classList.add("hidden");
+  $("echoes-opt-in").checked = Boolean(state.settings.defaultEchoesOptIn);
 };
 
 const renderEntries = () => {
@@ -239,12 +370,26 @@ const renderEntries = () => {
 
 const renderTimeline = () => {
   const section = ids.timelineSectionFilter.value;
-  const month = ids.timelineDateFilter.value;
+  const person = String(ids.timelinePersonFilter?.value || "").trim().toLowerCase();
+  const year = Number(ids.timelineYearFilter?.value || 0);
+  const month = Number(ids.timelineMonthFilter?.value || 0);
+  const day = Number(ids.timelineDayFilter?.value || 0);
+  const time = String(ids.timelineTimeFilter?.value || "");
+  const [filterHour, filterMinute] = time ? time.split(":").map(Number) : [];
   const entries = state.entries
     .map((e) => ({ ...e, createdAt: normalizeDate(e) }))
     .filter(isReleased)
     .filter((e) => section === "All" || e.category === section)
-    .filter((e) => !month || e.createdAt.slice(0, 7) === month)
+    .filter((e) => !person || String(e.authorName || "").toLowerCase().includes(person) || String(e.deliveryMethod || "").toLowerCase().includes(person))
+    .filter((e) => {
+      const dt = new Date(e.createdAt);
+      if (Number.isNaN(dt.getTime())) return false;
+      if (year && dt.getFullYear() !== year) return false;
+      if (month && dt.getMonth() + 1 !== month) return false;
+      if (day && dt.getDate() !== day) return false;
+      if (time && (dt.getHours() !== filterHour || dt.getMinutes() !== filterMinute)) return false;
+      return true;
+    })
     .sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
   ids.timelineList.innerHTML =
     entries.length === 0
@@ -280,6 +425,10 @@ if (isFirebaseConfigured()) {
     if (typeof state.unsub === "function") state.unsub();
     state.entries = [];
     if (user) {
+      if (!state.settings.displayName) {
+        state.settings.displayName = user.displayName?.trim() || (user.email ? user.email.split("@")[0] : "");
+      }
+      loadUserProfile(user.uid).catch((err) => console.error("Profile load failed:", err));
       const q = query(collection(state.db, "users", user.uid, "entries"), orderBy("createdAt", "desc"));
       state.unsub = onSnapshot(q, (snap) => {
         state.entries = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
@@ -371,6 +520,41 @@ on(visibilityGroup, "click", (e) => {
   target.classList.add("active");
   $("entry-audience").value = target.dataset.audience;
 });
+on(ids.settingsVisibilityGroup, "click", (e) => {
+  const target = e.target.closest("[data-default-audience]");
+  if (!target) return;
+  state.settings.defaultAudience = target.dataset.defaultAudience;
+  applySettingsToUi();
+});
+on(ids.saveSettingsBtn, "click", () => {
+  const displayName = String(ids.settingsDisplayName?.value || "").trim();
+  const username = normalizeUsername(ids.settingsUsername?.value || "");
+  const bio = String(ids.settingsBio?.value || "").trim();
+  if (!displayName) return setSettingsStatus("Display name is required.", "error");
+  if (!username) return setSettingsStatus("Username is required.", "error");
+  if (!USERNAME_RE.test(username)) return setSettingsStatus("Username must be 3-24 chars: lowercase letters, numbers, '.' or '_'.", "error");
+  state.settings.displayName = displayName;
+  state.settings.username = username;
+  state.settings.bio = bio;
+  state.settings.defaultEchoesOptIn = Boolean(ids.settingsEchoesOptIn?.checked);
+  const persistOnly = () => {
+    persistSettings();
+    applySettingsToUi();
+    setAuthUi();
+  };
+  if (!state.user || !state.db) {
+    persistOnly();
+    return setSettingsStatus("Saved locally. Sign in to reserve this username globally.", "success");
+  }
+  claimUsername({ uid: state.user.uid, username, displayName, bio })
+    .then(() => {
+      persistOnly();
+      setSettingsStatus("Saved. Username claimed successfully.", "success");
+    })
+    .catch((err) => {
+      setSettingsStatus(err.message || "Could not save profile.", "error");
+    });
+});
 
 ids.sectionTabs.forEach((tab) =>
   on(tab, "click", () => {
@@ -396,7 +580,11 @@ ids.letterTabs.forEach((tab) =>
 );
 
 on(timelineSectionFilter, "change", renderTimeline);
-on(timelineDateFilter, "change", renderTimeline);
+on(timelinePersonFilter, "input", renderTimeline);
+on(timelineYearFilter, "input", renderTimeline);
+on(timelineMonthFilter, "change", renderTimeline);
+on(timelineDayFilter, "input", renderTimeline);
+on(timelineTimeFilter, "change", renderTimeline);
 on(timelineToggleBtn, "click", () => {
   state.timelineMode = state.timelineMode === "my" ? "family" : "my";
   ids.timelineToggleBtn.textContent = state.timelineMode === "my" ? "My Story" : "Family Story";
@@ -438,6 +626,7 @@ on(backToOnboardingBtn, "click", () => {
   ids.authBar.classList.add("hidden");
   updateOnboarding();
 });
+on(ids.continueGuestBtn, "click", hideAuthModal);
 on(authModal, "click", (e) => {
   if (e.target === ids.authModal) hideAuthModal();
 });
@@ -461,6 +650,8 @@ ids.authActionButtons.forEach((btn) =>
   })
 );
 
+parseSettings();
+applySettingsToUi();
 setActivePage(state.activePage);
 ids.sectionTabs.forEach((el) => el.classList.toggle("active", el.dataset.section === state.journalSection));
 setAuthUi();
