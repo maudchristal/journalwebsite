@@ -234,6 +234,7 @@ h2, h3 { margin: 0 0 0.6rem; }
   background: rgba(255, 255, 255, 0.72);
 }
 .letters-empty h3 { margin-bottom: 0.35rem; }
+.letters-guide h3 { margin-bottom: 0.35rem; }
 .toolbar, .tab-row {
   display: flex;
   gap: 0.5rem;
@@ -245,6 +246,10 @@ h2, h3 { margin: 0 0 0.6rem; }
 .toolbar select {
   width: auto;
   min-width: 104px;
+}
+.toolbar #timeline-clear-btn {
+  margin-top: 0;
+  padding: 0.38rem 0.74rem;
 }
 .tab {
   margin: 0;
@@ -331,6 +336,44 @@ input, textarea, select {
   background: rgba(255, 255, 255, 0.96);
 }
 textarea { min-height: 180px; font-size: 1.05rem; line-height: 1.65; }
+.editor-shell {
+  border: 1px solid rgba(94, 74, 131, 0.26);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.96);
+  padding: 0.5rem;
+}
+.editor-toolbar {
+  display: flex;
+  gap: 0.4rem;
+  margin-bottom: 0.45rem;
+}
+.editor-btn {
+  margin: 0;
+  border: 1px solid rgba(103, 80, 160, 0.28);
+  border-radius: 8px;
+  box-shadow: none;
+  background: rgba(255, 255, 255, 0.92);
+  color: #3f2d6f;
+  padding: 0.28rem 0.5rem;
+}
+.entry-editor {
+  min-height: 180px;
+  line-height: 1.65;
+  font-size: 1.05rem;
+  outline: none;
+  overflow: hidden;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+.entry-editor:empty::before {
+  content: attr(data-placeholder);
+  color: #8c819f;
+}
+.editor-count {
+  text-align: right;
+  font-size: 0.82rem;
+  margin-top: 0.3rem;
+}
 .chip-group, .visibility-group { display: flex; flex-wrap: wrap; gap: 0.45rem; }
 .chip, .visibility-btn, .schedule-toggle-btn {
   margin: 0;

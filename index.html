@@ -130,7 +130,9 @@
             </select>
             <input id="timeline-day-filter" type="number" min="1" max="31" placeholder="Day" />
             <input id="timeline-time-filter" type="time" step="60" />
+            <button id="timeline-clear-btn" class="secondary-action" type="button">Clear filters</button>
           </div>
+          <p id="timeline-results" class="muted"></p>
           <ul id="timeline-list" class="timeline-list card"></ul>
         </section>
 
@@ -192,6 +194,15 @@
             <button class="tab active" data-letter-tab="outbox">Outbox</button>
             <button class="tab" data-letter-tab="inbox">Inbox</button>
           </div>
+          <section class="card letters-guide">
+            <h3>Need a starting point?</h3>
+            <p class="muted">Pick a prompt and we will preload a letter draft with a gentle structure.</p>
+            <div class="chip-group" id="letter-prompts">
+              <button type="button" class="chip" data-letter-title="For my future self" data-letter-body="Hi future me,\n\nToday I want you to remember...\n\nWhat I hope has changed by then is...\n\nWith love,">Future Self</button>
+              <button type="button" class="chip" data-letter-title="A thank-you note" data-letter-body="Dear ___,\n\nThank you for...\n\nOne moment that stays with me is...\n\nWith gratitude,">Thank You</button>
+              <button type="button" class="chip" data-letter-title="When this opens..." data-letter-body="If you are reading this now,\n\nI wrote it because...\n\nWhat I want to tell you most is...\n\nAlways,">Time Capsule</button>
+            </div>
+          </section>
           <section id="letters-outbox" class="card">
             <ul id="letters-outbox-list" class="list"></ul>
           </section>
@@ -277,7 +288,15 @@
           </div>
 
           <label for="entry-body">Journal entry</label>
-          <textarea id="entry-body" name="body" rows="10" required placeholder="Write freely..."></textarea>
+          <div class="editor-shell">
+            <div class="editor-toolbar" role="toolbar" aria-label="Text formatting">
+              <button type="button" class="editor-btn" data-editor-command="bold" aria-label="Bold"><strong>B</strong></button>
+              <button type="button" class="editor-btn" data-editor-command="italic" aria-label="Italic"><em>I</em></button>
+            </div>
+            <div id="entry-body-editor" class="entry-editor" contenteditable="true" role="textbox" aria-multiline="true" data-placeholder="Write freely..."></div>
+            <div id="entry-word-count" class="muted editor-count">0 words</div>
+          </div>
+          <textarea id="entry-body" name="body" class="hidden"></textarea>
 
           <label>Visibility</label>
           <input id="entry-audience" name="audience" type="hidden" value="Self" />

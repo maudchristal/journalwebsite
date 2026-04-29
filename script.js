@@ -106,8 +106,11 @@ const ids = {
   sectionChips: $("section-chips"), visibilityGroup: $("visibility-group"), timelineSectionFilter: $("timeline-section-filter"),
   timelinePersonFilter: $("timeline-person-filter"), timelineYearFilter: $("timeline-year-filter"), timelineMonthFilter: $("timeline-month-filter"),
   timelineDayFilter: $("timeline-day-filter"), timelineTimeFilter: $("timeline-time-filter"), timelineToggleBtn: $("timeline-toggle-btn"),
+  timelineClearBtn: $("timeline-clear-btn"), timelineResults: $("timeline-results"),
   lettersOutboxList: $("letters-outbox-list"),
+  letterPrompts: $("letter-prompts"),
   echoesFeed: $("echoes-feed"), greetingTitle: $("greeting-title"), continueCard: $("continue-card"), arrivingSoon: $("arriving-soon"),
+  entryBodyEditor: $("entry-body-editor"), entryWordCount: $("entry-word-count"), editorToolbar: document.querySelector(".editor-toolbar"),
   startFirstEntryBtn: $("start-first-entry-btn"),
   continueGuestBtn: $("continue-guest-btn"),
   settingsDisplayName: $("settings-display-name"), settingsUsername: $("settings-username"), settingsBio: $("settings-bio"),
@@ -178,6 +181,12 @@ const setSettingsStatus = (message = "", type = "") => {
   ids.settingsStatus.textContent = message;
   ids.settingsStatus.classList.remove("success", "error");
   if (type) ids.settingsStatus.classList.add(type);
+};
+let settingsStatusTimer = null;
+const setSaveButtonBusy = (busy) => {
+  if (!ids.saveSettingsBtn) return;
+  ids.saveSettingsBtn.disabled = busy;
+  ids.saveSettingsBtn.textContent = busy ? "Saving..." : "Save";
 };
 const applySettingsToUi = () => {
   if (ids.settingsDisplayName) ids.settingsDisplayName.value = state.settings.displayName || "";
@@ -311,6 +320,10 @@ const updateOnboarding = () => {
 const openDrawer = (asLetter = false) => {
   $("drawer-title").textContent = asLetter ? "Write a Letter" : "New Entry";
   if (!state.user) return showAuthModal(asLetter ? "send this letter" : "save your entry");
+  if (asLetter) {
+    $("entry-category").value = "Letters";
+    ids.sectionChips.querySelectorAll(".chip").forEach((el) => el.classList.toggle("active", el.dataset.category === "Letters"));
+  }
   ids.entryDrawer.classList.remove("hidden");
   document.body.style.overflow = "hidden";
 };
@@ -333,6 +346,26 @@ const clearForm = () => {
   ids.scheduleToggleBtn.classList.remove("open");
   ids.individualOptions.classList.add("hidden");
   $("echoes-opt-in").checked = Boolean(state.settings.defaultEchoesOptIn);
+  if (ids.entryBodyEditor) ids.entryBodyEditor.innerHTML = "";
+  if ($("entry-body")) $("entry-body").value = "";
+  if (ids.entryWordCount) ids.entryWordCount.textContent = "0 words";
+};
+
+const normalizeEditorText = () => String(ids.entryBodyEditor?.innerText || "").replace(/\u00A0/g, " ").trim();
+const setEditorContent = (text = "") => {
+  if (!ids.entryBodyEditor) return;
+  ids.entryBodyEditor.innerText = text;
+  $("entry-body").value = text.trim();
+  updateEditorMetrics();
+};
+const updateEditorMetrics = () => {
+  if (!ids.entryBodyEditor) return;
+  const words = normalizeEditorText()
+    .split(/\s+/)
+    .filter(Boolean).length;
+  if (ids.entryWordCount) ids.entryWordCount.textContent = `${words} ${words === 1 ? "word" : "words"}`;
+  ids.entryBodyEditor.style.height = "auto";
+  ids.entryBodyEditor.style.height = `${Math.max(180, ids.entryBodyEditor.scrollHeight)}px`;
 };
 
 const renderEntries = () => {
@@ -397,6 +430,11 @@ const renderTimeline = () => {
       : entries
           .map((e) => `<li class="timeline-item"><strong>${esc(e.title)}</strong><div>${esc(e.category)} • ${state.timelineMode === "family" ? esc(e.authorName || "Family") : "You"}</div><div class="muted">${fmt(e.createdAt)}</div></li>`)
           .join("");
+  if (ids.timelineResults) {
+    ids.timelineResults.textContent = entries.length
+      ? `${entries.length} matching timeline entr${entries.length === 1 ? "y" : "ies"}`
+      : "No entries match your current filters.";
+  }
 };
 
 const renderEchoes = () => {
@@ -468,7 +506,9 @@ on(signOutBtn, "click", async () => {
 on(form, "submit", async (event) => {
   event.preventDefault();
   if (showAuthModal("save your entry")) return;
+  $("entry-body").value = normalizeEditorText();
   const fd = new FormData(form);
+  if (!String(fd.get("body") || "").trim()) return alert("Please write your journal entry.");
   const isScheduled = fd.get("isScheduled") === "on";
   const releaseDate = fd.get("releaseDate");
   if (isScheduled && !releaseDate) return alert("Please choose a release date/time.");
@@ -501,6 +541,18 @@ on(form, "submit", async (event) => {
 on(releaseTarget, "change", () => {
   ids.individualOptions.classList.toggle("hidden", ids.releaseTarget.value !== "person");
 });
+on(ids.editorToolbar, "click", (e) => {
+  const btn = e.target.closest("[data-editor-command]");
+  if (!btn) return;
+  const command = btn.dataset.editorCommand;
+  ids.entryBodyEditor?.focus();
+  document.execCommand(command, false);
+  updateEditorMetrics();
+});
+on(ids.entryBodyEditor, "input", () => {
+  $("entry-body").value = normalizeEditorText();
+  updateEditorMetrics();
+});
 on(scheduleToggleBtn, "click", () => {
   ids.scheduleToggle.checked = !ids.scheduleToggle.checked;
   ids.scheduleOptions.classList.toggle("hidden", !ids.scheduleToggle.checked);
@@ -526,13 +578,15 @@ on(ids.settingsVisibilityGroup, "click", (e) => {
   state.settings.defaultAudience = target.dataset.defaultAudience;
   applySettingsToUi();
 });
-on(ids.saveSettingsBtn, "click", () => {
+on(ids.saveSettingsBtn, "click", async () => {
+  if (settingsStatusTimer) clearTimeout(settingsStatusTimer);
   const displayName = String(ids.settingsDisplayName?.value || "").trim();
   const username = normalizeUsername(ids.settingsUsername?.value || "");
   const bio = String(ids.settingsBio?.value || "").trim();
   if (!displayName) return setSettingsStatus("Display name is required.", "error");
   if (!username) return setSettingsStatus("Username is required.", "error");
   if (!USERNAME_RE.test(username)) return setSettingsStatus("Username must be 3-24 chars: lowercase letters, numbers, '.' or '_'.", "error");
+  setSaveButtonBusy(true);
   state.settings.displayName = displayName;
   state.settings.username = username;
   state.settings.bio = bio;
@@ -544,16 +598,21 @@ on(ids.saveSettingsBtn, "click", () => {
   };
   if (!state.user || !state.db) {
     persistOnly();
-    return setSettingsStatus("Saved locally. Sign in to reserve this username globally.", "success");
+    setSettingsStatus("Saved locally. Sign in to reserve this username globally.", "success");
+    setSaveButtonBusy(false);
+    settingsStatusTimer = setTimeout(() => setSettingsStatus(""), 2600);
+    return;
   }
-  claimUsername({ uid: state.user.uid, username, displayName, bio })
-    .then(() => {
-      persistOnly();
-      setSettingsStatus("Saved. Username claimed successfully.", "success");
-    })
-    .catch((err) => {
-      setSettingsStatus(err.message || "Could not save profile.", "error");
-    });
+  try {
+    await claimUsername({ uid: state.user.uid, username, displayName, bio });
+    persistOnly();
+    setSettingsStatus("Saved. Username claimed successfully.", "success");
+    settingsStatusTimer = setTimeout(() => setSettingsStatus(""), 2600);
+  } catch (err) {
+    setSettingsStatus(err.message || "Could not save profile.", "error");
+  } finally {
+    setSaveButtonBusy(false);
+  }
 });
 
 ids.sectionTabs.forEach((tab) =>
@@ -585,6 +644,15 @@ on(timelineYearFilter, "input", renderTimeline);
 on(timelineMonthFilter, "change", renderTimeline);
 on(timelineDayFilter, "input", renderTimeline);
 on(timelineTimeFilter, "change", renderTimeline);
+on(ids.timelineClearBtn, "click", () => {
+  ids.timelineSectionFilter.value = "All";
+  ids.timelinePersonFilter.value = "";
+  ids.timelineYearFilter.value = "";
+  ids.timelineMonthFilter.value = "";
+  ids.timelineDayFilter.value = "";
+  ids.timelineTimeFilter.value = "";
+  renderTimeline();
+});
 on(timelineToggleBtn, "click", () => {
   state.timelineMode = state.timelineMode === "my" ? "family" : "my";
   ids.timelineToggleBtn.textContent = state.timelineMode === "my" ? "My Story" : "Family Story";
@@ -641,6 +709,14 @@ on(ids.lettersOutboxList, "click", (e) => {
   if (!target) return;
   openDrawer(true);
 });
+on(ids.letterPrompts, "click", (e) => {
+  const target = e.target.closest("[data-letter-title]");
+  if (!target) return;
+  if (showAuthModal("write this letter")) return;
+  openDrawer(true);
+  $("entry-title").value = target.dataset.letterTitle || "";
+  setEditorContent(target.dataset.letterBody || "");
+});
 ids.mobileTabs.forEach((tab) => on(tab, "click", () => setActivePage(tab.dataset.page)));
 ids.authActionButtons.forEach((btn) =>
   on(btn, "click", (e) => {
@@ -652,6 +728,7 @@ ids.authActionButtons.forEach((btn) =>
 
 parseSettings();
 applySettingsToUi();
+updateEditorMetrics();
 setActivePage(state.activePage);
 ids.sectionTabs.forEach((el) => el.classList.toggle("active", el.dataset.section === state.journalSection));
 setAuthUi();
