@@ -13,7 +13,8 @@ A simple, GitHub Pages-friendly journaling website starter focused on:
 
 - Plain HTML/CSS/JavaScript
 - No frameworks
-- Local browser storage (`localStorage`)
+- **Guest mode:** `localStorage` in the browser
+- **Accounts (optional):** Firebase Auth (email/password and **Google** via `signInWithPopup`) and Firestore at `users/{uid}/entries`
 
 ## Run locally
 
@@ -55,9 +56,20 @@ Because this is a static site with relative paths, it works cleanly on GitHub Pa
 - Optional AI opt-in flag with local placeholder insights
 - Demo seed button for quick testing
 
-## Notes for next phase
+## Firebase setup (accounts + cloud journal)
 
-- Add account/auth layer (then move storage to a backend database)
+1. In the [Firebase console](https://console.firebase.google.com/), create a project (or use an existing one).
+2. Add a **Web** app and copy the config object. Paste the values into `firebase-config.js` (replace the `YOUR_*` placeholders).
+3. **Authentication** (Build → Authentication → Get started → Sign-in method):
+   - Enable **Email/Password** (passwordless can stay off).
+   - Click **Add new provider** and enable **Google** (use your Google account when prompted, then save).
+4. **Firestore:** create a database in production or test mode, then **Rules** — use the rules in this repo’s `firestore.rules` (each user can only read/write `users/{userId}/entries/...` when `userId` matches their auth id). Publish the rules.
+5. **Authorized domains** (for GitHub Pages and Google sign-in): Authentication → **Settings** → Authorized domains — add your site (e.g. `yourname.github.io`) and your custom domain if any. **Localhost** works for Live Server / `python -m http.server` once listed (often added by default).
+6. After deployment, entries save under your Firebase **UID** once signed in. Use **Import guest entries** to copy any browser-only (`localStorage`) journal into your account.
+
+If Google sign-up hits odd verification issues, your instructor mentioned turning off strict **email enumeration protection** or adding test users in Authentication — follow Firebase Auth troubleshooting for your project.
+
+## Notes for next phase
 - Add real delivery integrations (email/SMS) for time-released individual entries
 - Add media attachments (voice notes, text imports, photos)
 - Add permissions and family-tree relationships
